@@ -1,60 +1,426 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Manual Data Entry</title>
+    <title>Create Order</title>
+
     <style>
         body {
-            font-family: Arial;
+            font-family: Arial, sans-serif;
             margin: 40px;
+            background: #f5f5f5;
         }
 
-        input, select {
-            margin-bottom: 10px;
-            width: 300px;
-            padding: 5px;
+        .container {
+            max-width: 900px;
+            margin: auto;
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+        }
+
+        .nav {
+            margin-bottom: 20px;
+        }
+
+        .nav a {
+            margin-right: 12px;
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        h1, h2 {
+            margin-top: 0;
         }
 
         label {
             display: block;
+            margin-top: 12px;
             font-weight: bold;
         }
 
-        .section {
-            margin-bottom: 20px;
+        input, select {
+            width: 100%;
+            padding: 8px;
+            margin-top: 4px;
+            box-sizing: border-box;
+        }
+
+        .item-card {
+            border: 1px solid #ddd;
+            padding: 16px;
+            margin-top: 12px;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+
+        .product-info-box {
+            margin-top: 12px;
+            padding: 12px;
+            background: #eef3f8;
+            border: 1px solid #cfd8e3;
+            border-radius: 8px;
+        }
+
+        .product-info-box p {
+            margin: 4px 0;
+        }
+
+        .total-box {
+            margin-top: 20px;
+            padding: 16px;
+            background: #e8f5e9;
+            border: 1px solid #b7dfb9;
+            border-radius: 8px;
+        }
+
+        .total-box p {
+            margin: 6px 0;
+            font-size: 1rem;
+        }
+
+        .grand-total {
+            font-size: 1.3rem;
+            font-weight: bold;
+        }
+
+        button {
+            margin-top: 16px;
+            padding: 10px 16px;
+            cursor: pointer;
+        }
+
+        .submit-btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+        }
+
+        .add-btn {
+            background: #222;
+            color: white;
+            border: none;
+            border-radius: 6px;
+        }
+
+        .remove-btn {
+            background: #b00020;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            margin-left: 8px;
+        }
+
+        .note {
+            color: #666;
+            font-size: 0.9rem;
+        }
+
+        .empty-warning {
+            padding: 12px;
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 8px;
+            color: #856404;
+        }
+
+        .customer-box {
+            padding: 12px;
+            background: #f1f5f9;
+            border-radius: 8px;
+            border: 1px solid #d0d7de;
+            margin-bottom: 16px;
         }
     </style>
 </head>
+
 <body>
+<div class="container">
+    <div class="nav">
+        <a href="/">Create Order</a>
+        <a href="/orders">View My Orders</a>
+        <a href="/logout">Logout</a>
+    </div>
 
-<h2>Add New Order</h2>
+    <h1>Create Customer Order</h1>
 
-<form method="POST" action="/submit">
+    <div class="customer-box">
+        <p><strong>Customer ID:</strong> {{ customer_profile.customer_id }}</p>
 
-    <!-- Seller Dropdown -->
-    <div class="section">
-        <label>Seller</label>
-        <select name="seller_id">
-            {% for s in sellers %}
-                <option value="{{ s.seller_id }}">
-                    {{ s.seller_id }} ({{ s.seller_city }}, {{ s.seller_state }})
-                </option>
-            {% endfor %}
+        {% if customer_profile.exists_in_customers_dataset %}
+            <p><strong>Customer Unique ID:</strong> {{ customer_profile.customer_unique_id }}</p>
+            <p><strong>Location:</strong> {{ customer_profile.customer_city }}, {{ customer_profile.customer_state }}</p>
+            <p><strong>Zip Code:</strong> {{ customer_profile.customer_zip_code_prefix }}</p>
+        {% else %}
+            <p><strong>Status:</strong> New customer / not found in existing customer dataset</p>
+        {% endif %}
+
+        <p><strong>Previous Orders:</strong> {{ customer_profile.order_count }}</p>
+
+        {% if customer_profile.latest_order_date %}
+            <p><strong>Latest Order:</strong> {{ customer_profile.latest_order_date }}</p>
+        {% endif %}
+    </div>
+
+    <p class="note">
+        This simulates a customer purchase page. Product details are shown for the user,
+        but only product ID and quantity are submitted.
+    </p>
+
+    <form method="POST" action="/submit">
+
+        <h2>Payment</h2>
+
+        <label>Payment Type</label>
+        <select name="payment_type">
+            <option value="credit_card">Credit Card</option>
+            <option value="boleto">Boleto</option>
+            <option value="voucher">Voucher</option>
+            <option value="debit_card">Debit Card</option>
         </select>
-    </div>
 
-    <!-- Other Fields -->
-    <div class="section">
-        {% for field in fields %}
-            {% if field not in ['seller_id', 'seller_city', 'seller_state'] %}
-                <label>{{ field }}</label>
-                <input name="{{ field }}">
-            {% endif %}
-        {% endfor %}
-    </div>
+        <label>Payment Installments</label>
+        <input name="payment_installments" type="number" min="1" value="1">
 
-    <button type="submit">Submit</button>
+        <h2>Items</h2>
 
-</form>
+        {% if not products %}
+            <div class="empty-warning">
+                No products were loaded. Check your GCS file path, product CSV, and Docker logs.
+            </div>
+        {% endif %}
+
+        <div id="items"></div>
+
+        <button type="button" class="add-btn" onclick="addItem()">Add Item</button>
+
+        <div class="total-box">
+            <h2>Order Total</h2>
+            <p>Items subtotal: <span id="subtotal">$0.00</span></p>
+            <p>Freight total: <span id="freightTotal">$0.00</span></p>
+            <p class="grand-total">Grand total: <span id="grandTotal">$0.00</span></p>
+        </div>
+
+        <br>
+
+        <button type="submit" class="submit-btn">Submit Order</button>
+    </form>
+</div>
+
+<script>
+const productData = {{ products | tojson }};
+
+function parseNumber(value) {
+    if (
+        value === null ||
+        value === undefined ||
+        value === "" ||
+        value === "nan" ||
+        Number.isNaN(Number(value))
+    ) {
+        return 0;
+    }
+
+    return Number(value);
+}
+
+function formatMoney(value) {
+    if (
+        value === null ||
+        value === undefined ||
+        value === "" ||
+        value === "nan" ||
+        Number.isNaN(Number(value))
+    ) {
+        return "Unknown";
+    }
+
+    return "$" + Number(value).toFixed(2);
+}
+
+function formatCurrency(value) {
+    return "$" + Number(value).toFixed(2);
+}
+
+function formatValue(value, suffix = "") {
+    if (
+        value === null ||
+        value === undefined ||
+        value === "" ||
+        value === "nan" ||
+        Number.isNaN(Number(value))
+    ) {
+        return "Unknown";
+    }
+
+    return value + suffix;
+}
+
+function getCategory(product) {
+    return (
+        product.product_category_name_english ||
+        product.product_category_name ||
+        "Unknown category"
+    );
+}
+
+function getSelectedProduct(index) {
+    const select = document.querySelector(`[name="product_id_${index}"]`);
+
+    if (!select) {
+        return null;
+    }
+
+    const productId = select.value;
+    return productData.find(p => p.product_id === productId);
+}
+
+function getQuantity(index) {
+    const quantityInput = document.querySelector(`[name="quantity_${index}"]`);
+
+    if (!quantityInput) {
+        return 0;
+    }
+
+    const quantity = parseInt(quantityInput.value, 10);
+
+    if (Number.isNaN(quantity) || quantity < 1) {
+        return 1;
+    }
+
+    return quantity;
+}
+
+function updateProductInfo(index) {
+    const infoBox = document.getElementById(`product_info_${index}`);
+    const product = getSelectedProduct(index);
+
+    if (!infoBox) {
+        return;
+    }
+
+    if (!product) {
+        infoBox.innerHTML = "<p>No product information found.</p>";
+        updateTotal();
+        return;
+    }
+
+    const category = getCategory(product);
+
+    const dimensions =
+        `${formatValue(product.product_length_cm)} × ` +
+        `${formatValue(product.product_height_cm)} × ` +
+        `${formatValue(product.product_width_cm)} cm`;
+
+    const quantity = getQuantity(index);
+    const itemSubtotal = parseNumber(product.price) * quantity;
+    const itemFreight = parseNumber(product.freight_value) * quantity;
+    const itemTotal = itemSubtotal + itemFreight;
+
+    infoBox.innerHTML = `
+        <p><strong>Category:</strong> ${category}</p>
+        <p><strong>Price:</strong> ${formatMoney(product.price)}</p>
+        <p><strong>Freight:</strong> ${formatMoney(product.freight_value)}</p>
+        <p><strong>Photos:</strong> ${formatValue(product.product_photos_qty)}</p>
+        <p><strong>Weight:</strong> ${formatValue(product.product_weight_g, "g")}</p>
+        <p><strong>Dimensions:</strong> ${dimensions}</p>
+        <p><strong>Product ID:</strong> ${product.product_id}</p>
+        <p><strong>Line total:</strong> ${formatCurrency(itemTotal)}</p>
+    `;
+
+    updateTotal();
+}
+
+function updateTotal() {
+    let subtotal = 0;
+    let freightTotal = 0;
+
+    const itemCards = document.querySelectorAll(".item-card");
+
+    itemCards.forEach(card => {
+        const index = card.dataset.index;
+        const product = getSelectedProduct(index);
+        const quantity = getQuantity(index);
+
+        if (!product) {
+            return;
+        }
+
+        subtotal += parseNumber(product.price) * quantity;
+        freightTotal += parseNumber(product.freight_value) * quantity;
+    });
+
+    const grandTotal = subtotal + freightTotal;
+
+    document.getElementById("subtotal").textContent = formatCurrency(subtotal);
+    document.getElementById("freightTotal").textContent = formatCurrency(freightTotal);
+    document.getElementById("grandTotal").textContent = formatCurrency(grandTotal);
+}
+
+function addItem() {
+    if (!productData || productData.length === 0) {
+        alert("No products available. Check whether product data loaded from GCS.");
+        return;
+    }
+
+    const container = document.getElementById("items");
+    const index = container.children.length;
+
+    const productOptions = productData.map(product => {
+        return `
+            <option value="${product.product_id}">
+                ${product.display_name}
+            </option>
+        `;
+    }).join("");
+
+    const html = `
+        <div class="item-card" id="item_card_${index}" data-index="${index}">
+            <h3>Item ${index + 1}</h3>
+
+            <label>Product</label>
+            <select name="product_id_${index}" onchange="updateProductInfo(${index})">
+                ${productOptions}
+            </select>
+
+            <div id="product_info_${index}" class="product-info-box"></div>
+
+            <label>Quantity</label>
+            <input
+                name="quantity_${index}"
+                type="number"
+                min="1"
+                value="1"
+                oninput="updateProductInfo(${index})"
+            >
+
+            <button type="button" class="remove-btn" onclick="removeItem(${index})">
+                Remove Item
+            </button>
+        </div>
+    `;
+
+    container.insertAdjacentHTML("beforeend", html);
+    updateProductInfo(index);
+    updateTotal();
+}
+
+function removeItem(index) {
+    const itemCard = document.getElementById(`item_card_${index}`);
+
+    if (itemCard) {
+        itemCard.remove();
+    }
+
+    updateTotal();
+}
+
+if (productData && productData.length > 0) {
+    addItem();
+} else {
+    updateTotal();
+}
+</script>
 
 </body>
 </html>

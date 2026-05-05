@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>My Orders</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: auto;
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+        }
+
+        .nav {
+            margin-bottom: 20px;
+        }
+
+        .nav a {
+            margin-right: 12px;
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .customer-box {
+            padding: 12px;
+            background: #f1f5f9;
+            border-radius: 8px;
+            border: 1px solid #d0d7de;
+            margin-bottom: 16px;
+        }
+
+        .order-card {
+            border: 1px solid #ddd;
+            background: #fafafa;
+            border-radius: 10px;
+            padding: 16px;
+            margin-top: 16px;
+        }
+
+        .order-header {
+            background: #eef3f8;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 12px;
+        }
+
+        .order-header p {
+            margin: 4px 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            font-size: 0.9rem;
+            text-align: left;
+        }
+
+        th {
+            background: #f1f1f1;
+        }
+
+        .empty {
+            padding: 12px;
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 8px;
+            color: #856404;
+        }
+
+        .total {
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+    <div class="nav">
+        <a href="/">Create Order</a>
+        <a href="/orders">View My Orders</a>
+        <a href="/logout">Logout</a>
+    </div>
+
+    <h1>My Orders</h1>
+
+    <div class="customer-box">
+        <p><strong>Customer ID:</strong> {{ customer_profile.customer_id }}</p>
+
+        {% if customer_profile.exists_in_customers_dataset %}
+            <p><strong>Customer Unique ID:</strong> {{ customer_profile.customer_unique_id }}</p>
+            <p><strong>Location:</strong> {{ customer_profile.customer_city }}, {{ customer_profile.customer_state }}</p>
+            <p><strong>Zip Code:</strong> {{ customer_profile.customer_zip_code_prefix }}</p>
+        {% else %}
+            <p><strong>Status:</strong> New customer / not found in existing customer dataset</p>
+        {% endif %}
+
+        <p><strong>Previous Orders:</strong> {{ customer_profile.order_count }}</p>
+
+        {% if customer_profile.latest_order_date %}
+            <p><strong>Latest Order:</strong> {{ customer_profile.latest_order_date }}</p>
+        {% endif %}
+    </div>
+
+    {% if not orders %}
+        <div class="empty">
+            No previous orders found for this customer.
+        </div>
+    {% endif %}
+
+    {% for order in orders %}
+        <div class="order-card">
+            <div class="order-header">
+                <p><strong>Order ID:</strong> {{ order.order_id }}</p>
+                <p><strong>Status:</strong> {{ order.order_status }}</p>
+                <p><strong>Purchased:</strong> {{ order.order_purchase_timestamp }}</p>
+                <p><strong>Estimated Delivery:</strong> {{ order.order_estimated_delivery_date }}</p>
+                <p><strong>Payment:</strong> {{ order.payment_type }} / {{ order.payment_installments }} installment(s)</p>
+                <p class="total"><strong>Total:</strong> ${{ "%.2f"|format(order.order_total) }}</p>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Item #</th>
+                        <th>Product</th>
+                        <th>Category</th>
+                        <th>Seller</th>
+                        <th>Price</th>
+                        <th>Freight</th>
+                        <th>Line Total</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for item in order["items"] %}
+                        <tr>
+                            <td>{{ item.order_item_id }}</td>
+                            <td>{{ item.product_id }}</td>
+                            <td>{{ item.category }}</td>
+                            <td>{{ item.seller_id }}</td>
+                            <td>${{ "%.2f"|format(item.price) }}</td>
+                            <td>${{ "%.2f"|format(item.freight_value) }}</td>
+                            <td>${{ "%.2f"|format(item.payment_value) }}</td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% endfor %}
+</div>
+</body>
+</html>

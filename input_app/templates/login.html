@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Customer Login</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 40px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 500px;
+            margin: auto;
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+        }
+
+        h1 {
+            margin-top: 0;
+        }
+
+        label {
+            display: block;
+            margin-top: 12px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 8px;
+            margin-top: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            margin-top: 16px;
+            padding: 10px 16px;
+            cursor: pointer;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 6px;
+        }
+
+        .error {
+            margin-top: 12px;
+            padding: 10px;
+            background: #ffd8d8;
+            border: 1px solid #ffaaaa;
+            color: #7a0000;
+            border-radius: 6px;
+        }
+
+        .note {
+            color: #666;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+
+<body>
+<div class="container">
+    <h1>Customer Login</h1>
+
+    <p class="note">
+        Enter an existing customer ID to view past orders, or enter a new customer ID to simulate a new customer.
+    </p>
+
+    {% if error %}
+        <div class="error">
+            {{ error }}
+        </div>
+    {% endif %}
+
+    <form method="POST" action="/login">
+        <label>Customer ID</label>
+        <input name="customer_id" placeholder="Example: CUST_001">
+
+        <button type="submit">Login</button>
+    </form>
+</div>
+</body>
+</html>
